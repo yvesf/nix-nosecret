@@ -84,7 +84,7 @@
                     ${optionalString (secret.mode != "") "chmod ${secret.mode} '${filename}'"}
                     ${optionalString (secret.owner != "") "chown ${secret.owner} '${filename}'"}
                     ${optionalString (secret.group != "") "chown ${secret.group} '${filename}'"}
-                    cat > '${filename}' <<- "END_OF_SECRET_${tag}"
+                    cat <<"END_OF_SECRET_${tag}" | head -c -1 > '${filename}'
                     ${secret.content}
                     END_OF_SECRET_${tag}
                     rm -f '${filename}.missing'
