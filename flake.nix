@@ -58,7 +58,7 @@
               let
                 secretType = types.submodule ({ config, ... }: {
                   options = {
-                    content = mkOption { type = types.str; description = "content of secret."; };
+                    content = mkOption { type = types.str; description = "content of secret."; apply = value: { confirm ? false }: if confirm then value else throw "reading not allowed"; };
                     mode = mkOption { type = types.str; default = "0400"; description = "File permissions in octal."; };
                     owner = mkOption { type = types.str; default = "root"; description = "Owner user name."; };
                     group = mkOption { type = types.str; default = "root"; description = "Owner group name."; };
@@ -69,6 +69,7 @@
                 directory = mkOption { type = types.path; default = "/run/nosecret"; description = "Folder where values will be written."; };
                 values = mkOption { type = types.attrsOf secretType; default = { }; description = "the defined values to be mapped."; };
                 file = mkOption { type = types.attrsOf types.string; description = "will be populated with the path to the secret. do not set."; };
+                allowReading = mkOption { type = types.bool; default = false; description = "internal; do not set"; };
               };
 
             config =
@@ -85,7 +86,7 @@
                     ${optionalString (secret.owner != "") "chown ${secret.owner} '${filename}'"}
                     ${optionalString (secret.group != "") "chown ${secret.group} '${filename}'"}
                     cat <<"END_OF_SECRET_${tag}" | head -c -1 > '${filename}'
-                    ${secret.content}
+                    ${secret.content {confirm = true;}}
                     END_OF_SECRET_${tag}
                     rm -f '${filename}.missing'
                   '';
