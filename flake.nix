@@ -109,16 +109,31 @@
 
                 system.activationScripts.nosecret = {
                   text = ''
-                    echo '[nosecret] Clearing old values from ${cfg.directory}'
-                    test -d '${cfg.directory}' && find '${cfg.directory}' -type f -delete
-
-                    echo '[nosecret] Ensuring existance of ${cfg.directory}'
                     mkdir -p '${cfg.directory}'
-                    grep -q '${cfg.directory} ramfs' /proc/mounts || mount -t ramfs none '${cfg.directory}' -o nodev,nosuid,mode=0751
+                    if ! grep -q '${cfg.directory} ramfs' /proc/mounts; then
+                      echo '[nosecret] mount ramfs in ${cfg.directory}'
+                      mount -t ramfs none '${cfg.directory}' -o nodev,nosuid,mode=0751
+                    fi
 
-                    echo '[nosecret] populate marker files to ${cfg.directory}'
+                    echo '[nosecret] Processing secret files in ${cfg.directory}'
+                    for existingFile in '${cfg.directory}'/*; do
+                      name=$(basename "$existingFile")
+                      for f in ${concatStringsSep " " (attrNames cfg.values)}; do
+                        if [ "$f" == "$name" ] || [ "$f.missing" == "$name" ]; then
+                          continue 2
+                        fi
+                      done
+                      echo "[nosecret] delete obsolete file $existingFile"
+                      rm "$existingFile"
+                    done
+
                     for f in ${concatStringsSep " " (attrNames cfg.values)}; do
-                      touch '${cfg.directory}'"/''${f}.missing"
+                      if [ -f "${cfg.directory}/$f" ] || [ -f "${cfg.directory}/$f.missing" ]; then
+                        : file exists already
+                      else
+                        echo "[nosecret] create marker file to ${cfg.directory}/$f.missing"
+                        touch touch '${cfg.directory}'"/''${f}.missing"
+                      fi
                     done
                   '';
                   deps = [ "specialfs" ];
